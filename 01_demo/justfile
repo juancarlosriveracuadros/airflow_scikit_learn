@@ -1,0 +1,102 @@
+# Set the root directory path
+root_dir := "../"
+airflow_path := "~/airflow"
+
+# Default recipe shows available commands
+default:
+    @just --list
+
+# Create Python environment if it doesn't exist
+create-env:
+    #!/bin/bash
+    if [ ! -d "{{root_dir}}env_air" ]; then
+        python -m venv {{root_dir}}env_air
+        echo "Environment created successfully!"
+    else
+        echo "Environment already exists!"
+    fi
+
+# Create necessary directories if they don't exist
+create-dirs:
+    #!/bin/bash
+    export AIRFLOW_HOME={{airflow_path}}
+    if [ ! -d "file/data" ]; then
+        mkdir -p file/data
+        echo "Data directory created successfully!"
+    else
+        echo "Data directory already exists!"
+    fi
+    if [ ! -d "file/model" ]; then
+        mkdir -p file/model
+        echo "Models directory created successfully!"
+    else
+        echo "Models directory already exists!"
+    fi
+    if [ ! -d "${AIRFLOW_HOME}/dags" ]; then
+        mkdir -p ${AIRFLOW_HOME}/dags
+        echo "Dags directory created successfully!"
+    else
+        echo "Dags directory already exists!"
+    fi
+
+# Activate Python environment and install requirements
+setup:
+    . {{root_dir}}env_air/bin/activate
+    export AIRFLOW_HOME={{airflow_path}}
+    wget https://raw.githubusercontent.com/apache/airflow/constraints-2.9.1/constraints-3.10.txt -O file/setup/constraints.txt
+    pip install "apache-airflow==2.9.1" --constraint file/setup/constraints.txt
+    sudo apt-get install graphviz graphviz-dev -y
+    pip install graphviz
+    pip install -r {{root_dir}}requirements.txt
+    
+# Show Python environment info
+env-info:
+    python --version
+    pip list
+
+# Clean Python cache files
+clean:
+    find . -type d -name "__pycache__" -exec rm -rf {} +
+    find . -type f -name "*.pyc" -delete
+
+# Update requirements.txt with current packages
+update-reqs:
+    pip freeze > {{root_dir}}requirements.txt
+
+# Initialize Airflow database
+init-airflow:
+    airflow db reset -y
+    airflow db migrate
+    airflow connections create-default-connections
+    airflow users create \
+        --username admin \
+        --firstname admin \
+        --lastname admin \
+        --role Admin \
+        --email admin@example.com \
+        --password admin
+
+# Start Airflow services
+run-airflow:
+    . {{root_dir}}env_air/bin/activate
+    cp dags/*.py {{airflow_path}}/dags/
+    airflow webserver --port 8080 & 
+    airflow scheduler
+
+# Test DAG file syntax
+test-dag:
+    python -c "from astro_ml import *"
+    echo "✓ DAG syntax check passed"
+
+# Test DAG structure and tasks
+test-dag-tasks:
+    airflow dags test astro_ml $(date +%Y-%m-%d)
+
+# Full DAG test suite
+test: test-dag test-dag-tasks
+    echo "✓ All DAG tests completed successfully"
+
+
+# Deactivate Python environment
+deactivate:
+    deactivate

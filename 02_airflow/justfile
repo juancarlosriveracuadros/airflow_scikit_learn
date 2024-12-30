@@ -1,0 +1,11 @@
+start-airflow:
+    astro dev start
+
+stop-airflow:
+    astro dev stop
+
+restart-airflow:
+    astro dev restart
+
+start-bash:
+    astro dev bash
