@@ -174,5 +174,3 @@ cython_debug/
 
 # directory for 01_demo
 01_demo/file/** 
-
-02_airflow/include/data/minio/.minio.sys/**
