@@ -47,7 +47,7 @@ def stock_market():
         image='airflow/stock-app',
         container_name='format_prices',
         api_version='auto',
-        auto_remove=True,
+        auto_remove='force',
         docker_url='tcp://docker-proxy:2375',
         network_mode='container:spark-master',
         tty=True,
@@ -69,8 +69,9 @@ def stock_market():
     load_to_dw = aql.load_file(
         task_id='load_to_dw',
         input_file=File(
-            path=f"s3://{BUCKET_NAME}/{{task_instance.xcom_pull(task_ids='store_prices')}}",
-            conn_id='minio'),
+            path=f"s3://{BUCKET_NAME}/{{{{task_instance.xcom_pull(task_ids='get_formatted_csv')}}}}",
+            #path=F"s3://{BUCKET_NAME}/{{{{task_instance.xcom_pull(task_ids='store_prices')}}}}",
+            conn_id='minio_http'),
         output_table=Table(
             name='stock_market',
             conn_id='postgres',            
